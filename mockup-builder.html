@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>باني الواجهات المبسط</title>
+<style>
+  :root{
+    --ink:#1c1b18;
+    --ink-soft:#5c5952;
+    --line:#ddd9d0;
+    --paper:#faf8f4;
+    --panel:#ffffff;
+    --accent:#3b6a5c;
+    --accent-soft:#e3ede9;
+    --danger:#b0473f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:"Segoe UI",Tahoma,Arial,sans-serif;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;}
+  #app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
+
+  header{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--panel);flex-shrink:0;}
+  header h1{font-size:15px;margin:0;font-weight:700;}
+  header .sub{font-size:11px;color:var(--ink-soft);}
+  #presetBtns{display:flex;gap:6px;}
+  .pill{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:5px 10px;font-size:11px;cursor:pointer;color:var(--ink-soft);}
+  .pill.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .pill:disabled{opacity:.35;cursor:default;}
+  .guide{position:absolute;background:#ff5a5f;pointer-events:none;z-index:40;}
+  .guide.v{width:1px;top:0;bottom:0;}
+  .guide.h{height:1px;left:0;right:0;}
+  .alignSeg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:1;}
+  .alignSeg button{flex:1;border:none;background:#fff;padding:7px 0;font-size:12px;cursor:pointer;color:var(--ink-soft);border-left:1px solid var(--line);}
+  .alignSeg button:first-child{border-left:none;}
+  .alignSeg button.active{background:var(--accent);color:#fff;}
+  #importArea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:8px;padding:8px;font-family:monospace;font-size:11px;margin-bottom:8px;}
+
+  #main{flex:1;display:flex;min-height:0;}
+  #stageWrap{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:18px;background:
+    repeating-conic-gradient(#f0eee7 0% 25%, #f5f3ee 0% 50%) 0 0/16px 16px;}
+  #stage{position:relative;background:#ffffff;box-shadow:0 2px 10px rgba(0,0,0,.12);overflow:hidden;flex-shrink:0;touch-action:none;}
+
+  .el{position:absolute;user-select:none;-webkit-user-select:none;cursor:move;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;box-sizing:border-box;}
+  .el.selected{outline:2px solid var(--accent);outline-offset:2px;}
+  .el .txt{pointer-events:none;width:100%;padding:0 6px;overflow:hidden;white-space:pre-wrap;word-break:break-word;}
+  .handle{position:absolute;width:18px;height:18px;background:var(--accent);border:2px solid #fff;border-radius:50%;right:-9px;bottom:-9px;cursor:nwse-resize;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .glossy::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.12) 45%, rgba(255,255,255,0) 55%, rgba(0,0,0,.06) 100%);pointer-events:none;}
+
+  #tray{border-top:1px solid var(--line);background:var(--panel);flex-shrink:0;}
+  #toolTabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto;}
+  .toolTab{flex-shrink:0;padding:9px 14px;font-size:12px;cursor:pointer;color:var(--ink-soft);border-bottom:2px solid transparent;white-space:nowrap;}
+  .toolTab.active{color:var(--ink);border-color:var(--accent);font-weight:700;}
+  #trayBody{padding:12px 14px 16px;max-height:38vh;overflow-y:auto;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px;}
+  .addBtn{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 6px;font-size:11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--ink);}
+  .addBtn:active{background:var(--accent-soft);}
+  .addBtn .ic{width:26px;height:18px;border:1.5px solid var(--ink);border-radius:4px;}
+  .addBtn .ic.circle{border-radius:50%;width:20px;height:20px;}
+  .addBtn .ic.pill{border-radius:20px;}
+  .addBtn .ic.line{height:2px;border-radius:2px;border:none;background:var(--ink);}
+
+  .row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .row label{font-size:12px;color:var(--ink-soft);width:78px;flex-shrink:0;}
+  .row input[type="range"]{flex:1;}
+  .row input[type="color"]{width:36px;height:28px;border:1px solid var(--line);border-radius:6px;padding:0;background:none;}
+  .row input[type="text"]{flex:1;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit;}
+  .valTag{font-size:11px;color:var(--ink-soft);width:34px;text-align:left;}
+
+  .swatches{display:flex;gap:6px;flex-wrap:wrap;}
+  .sw{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15);cursor:pointer;}
+
+  .toggleRow{display:flex;align-items:center;justify-content:space-between;background:var(--accent-soft);border-radius:10px;padding:9px 12px;margin-bottom:12px;}
+  .toggleRow span{font-size:12.5px;font-weight:600;}
+  .switch{width:40px;height:22px;border-radius:20px;background:var(--line);position:relative;cursor:pointer;flex-shrink:0;}
+  .switch.on{background:var(--accent);}
+  .switch .dot{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s;}
+  .switch.on .dot{transform:translateX(18px);}
+
+  .actionsRow{display:flex;gap:8px;}
+  .actBtn{flex:1;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px;font-size:12px;cursor:pointer;color:var(--ink);}
+  .actBtn.danger{color:var(--danger);border-color:#eccac6;background:#fdf3f2;}
+
+  .emptyMsg{font-size:12.5px;color:var(--ink-soft);line-height:1.9;padding:6px 2px;}
+  .emptyMsg b{color:var(--ink);}
+
+  #layersList{display:flex;flex-direction:column;gap:6px;}
+  .layerItem{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;}
+  .layerItem.active{border-color:var(--accent);background:var(--accent-soft);}
+  .layerItem span.del{color:var(--danger);font-size:14px;padding:0 4px;}
+
+  .exportCard{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;background:var(--paper);}
+  .exportCard h3{font-size:12.5px;margin:0 0 4px;}
+  .exportCard p{font-size:11.5px;color:var(--ink-soft);margin:0 0 10px;line-height:1.7;}
+  .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:12px;padding:8px 16px;border-radius:20px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;}
+  .toast.show{opacity:1;}
+
+  @media (min-width:760px){
+    #main{flex-direction:row;}
+    #tray{border-top:none;border-right:1px solid var(--line);width:300px;display:flex;flex-direction:column;}
+    #trayBody{max-height:none;flex:1;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div>
+      <h1>باني الواجهات المبسط</h1>
+      <div class="sub">صمّم بسرعة، ثم صوّر الشاشة وأرسلها لوكيل الذكاء الاصطناعي</div>
+    </div>
+    <div id="presetBtns">
+      <button class="pill" id="undoBtn" title="تراجع">↩ تراجع</button>
+      <button class="pill" id="redoBtn" title="إعادة">↪ إعادة</button>
+      <button class="pill" data-preset="mobile">هاتف</button>
+      <button class="pill" data-preset="desktop">شاشة</button>
+    </div>
+  </header>
+
+  <div id="main">
+    <div id="stageWrap">
+      <div id="stage"></div>
+    </div>
+
+    <div id="tray">
+      <div id="toolTabs">
+        <div class="toolTab active" data-tab="add">إضافة عناصر</div>
+        <div class="toolTab" data-tab="style">تنسيق العنصر</div>
+        <div class="toolTab" data-tab="layers">الطبقات</div>
+        <div class="toolTab" data-tab="bg">خلفية الشاشة</div>
+        <div class="toolTab" data-tab="export">تصدير للوكيل</div>
+      </div>
+      <div id="trayBody"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const trayBody = document.getElementById('trayBody');
+  const tabs = document.querySelectorAll('.toolTab');
+  const presetBtns = document.querySelectorAll('#presetBtns .pill');
+
+  let elements = [];
+  let idCounter = 1;
+  let selectedId = null;
+  let currentTab = 'add';
+  let stageBg = '#ffffff';
+  let undoStack = [];
+  let redoStack = [];
+
+  function snapshot(){
+    undoStack.push(JSON.stringify({elements, stageBg}));
+    if(undoStack.length>50) undoStack.shift();
+    redoStack = [];
+    updateHistBtns();
+  }
+  function restore(json){
+    const data = JSON.parse(json);
+    elements = data.elements; stageBg = data.stageBg;
+    if(!elements.find(e=>e.id===selectedId)) selectedId=null;
+    render();
+  }
+  function undo(){
+    if(undoStack.length===0) return;
+    redoStack.push(JSON.stringify({elements, stageBg}));
+    restore(undoStack.pop());
+    updateHistBtns();
+  }
+  function redo(){
+    if(redoStack.length===0) return;
+    undoStack.push(JSON.stringify({elements, stageBg}));
+    restore(redoStack.pop());
+    updateHistBtns();
+  }
+  function updateHistBtns(){
+    document.getElementById('undoBtn').disabled = undoStack.length===0;
+    document.getElementById('redoBtn').disabled = redoStack.length===0;
+  }
+
+  const palette = ['#ffffff','#f4f1ea','#1c1b18','#3b6a5c','#7f9cff','#e07a5f','#f2cc8f','#81b29a','#d64550','#6c5ce7'];
+
+  function setPreset(name){
+    presetBtns.forEach(b=>b.classList.toggle('active', b.dataset.preset===name));
+    if(name==='mobile'){ stage.style.width='340px'; stage.style.height='640px'; }
+    else { stage.style.width='min(92vw,900px)'; stage.style.height='520px'; }
+  }
+  presetBtns.forEach(b=> b.addEventListener('click', ()=> setPreset(b.dataset.preset)) );
+  setPreset('mobile');
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('redoBtn').addEventListener('click', redo);
+  updateHistBtns();
+
+  document.addEventListener('keydown', (e)=>{
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if(tag==='INPUT' || tag==='TEXTAREA') return;
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); e.shiftKey? redo(): undo(); return; }
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='d'){ e.preventDefault(); duplicateSelected(); return; }
+    if(!selectedId) return;
+    const el = elements.find(x=>x.id===selectedId);
+    if(!el) return;
+    if(e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); snapshot(); elements=elements.filter(x=>x.id!==selectedId); selectedId=null; render(); switchTab('add'); return; }
+    const step = e.shiftKey? 10: 2;
+    let moved=false;
+    if(e.key==='ArrowLeft'){ el.x-=step; moved=true; }
+    if(e.key==='ArrowRight'){ el.x+=step; moved=true; }
+    if(e.key==='ArrowUp'){ el.y-=step; moved=true; }
+    if(e.key==='ArrowDown'){ el.y+=step; moved=true; }
+    if(moved){ e.preventDefault(); render(); }
+  });
+
+  function duplicateSelected(){
+    const el = elements.find(e=>e.id===selectedId);
+    if(!el) return;
+    snapshot();
+    const copy = JSON.parse(JSON.stringify(el));
+    copy.id = uid(); copy.x += 14; copy.y += 14;
+    elements.push(copy); selectedId=copy.id; render();
+  }
+
+  function uid(){ return 'e'+(idCounter++); }
+
+  function defaultsFor(type){
+    const base = {id:uid(), type, x:30, y:30, w:120, h:44, fill:'#3b6a5c', border:'#00000000', borderW:0, radius:10, text:'', textColor:'#ffffff', fontSize:13, glossy:false, opacity:1, textAlign:'center'};
+    if(type==='button'){ base.text='زر'; base.w=110; base.h=42; base.radius=10; }
+    if(type==='rect'){ base.fill='#e3ede9'; base.radius=8; base.w=140; base.h=90; base.textColor='#1c1b18'; }
+    if(type==='circle'){ base.fill='#e07a5f'; base.w=64; base.h=64; base.radius=999; base.text=''; }
+    if(type==='text'){ base.fill='#00000000'; base.textColor='#1c1b18'; base.text='نص هنا'; base.w=140; base.h=28; base.fontSize=15; }
+    if(type==='menubar'){ base.fill='#1c1b18'; base.textColor='#ffffff'; base.text='الرئيسية      البحث      حسابي'; base.w=300; base.h=52; base.radius=0; base.fontSize=12; }
+    if(type==='input'){ base.fill='#ffffff'; base.border='#c9c5ba'; base.borderW=1; base.textColor='#8a8779'; base.text='اكتب هنا...'; base.w=200; base.h=42; base.radius=8; base.fontSize=13; base.textAlign='right'; }
+    if(type==='card'){ base.fill='#ffffff'; base.border='#e5e2da'; base.borderW=1; base.w=200; base.h=120; base.radius=14; base.textColor='#1c1b18'; }
+    if(type==='divider'){ base.fill='#d8d4c9'; base.w=180; base.h=2; base.radius=2; base.text=''; }
+    if(type==='image'){ base.fill='#eceae3'; base.border='#c9c5ba'; base.borderW=1; base.w=160; base.h=110; base.radius=8; base.text='صورة'; base.textColor='#9a9689'; base.fontSize=12; }
+    return base;
+  }
+
+  function addElement(type){
+    snapshot();
+    const el = defaultsFor(type);
+    // center-ish placement with slight offset per count
+    const offset = (elements.length % 6) * 10;
+    el.x = 24 + offset; el.y = 24 + offset;
+    elements.push(el);
+    selectedId = el.id;
+    render();
+    switchTab('style');
+  }
+
+  function render(){
+    renderStage();
+    renderTray();
+  }
+
+  function renderStage(){
+    stage.style.background = stageBg;
+    stage.innerHTML = '';
+    elements.forEach(el=>{
+      const d = document.createElement('div');
+      d.className = 'el' + (el.id===selectedId? ' selected':'') + (el.glossy? ' glossy':'');
+      d.style.left = el.x+'px';
+      d.style.top = el.y+'px';
+      d.style.width = el.w+'px';
+      d.style.height = el.h+'px';
+      d.style.background = el.fill;
+      d.style.borderRadius = (el.type==='circle'? '50%' : el.radius+'px');
+      d.style.border = el.borderW>0 ? (el.borderW+'px solid '+el.border) : 'none';
+      d.style.opacity = (el.opacity==null?1:el.opacity);
+      d.dataset.id = el.id;
+
+      if(el.type==='image'){
+        d.style.backgroundImage = 'repeating-linear-gradient(45deg, rgba(0,0,0,.08) 0 2px, transparent 2px 10px)';
+        d.style.backgroundColor = el.fill;
+      }
+
+      if(el.text){
+        const t = document.createElement('div');
+        t.className='txt';
+        t.textContent = el.text;
+        t.style.color = el.textColor;
+        t.style.fontSize = el.fontSize+'px';
+        t.style.textAlign = el.textAlign || 'center';
+        t.style.fontWeight = (el.type==='button'||el.type==='menubar') ? '600':'400';
+        d.appendChild(t);
+      }
+
+      if(el.id===selectedId){
+        const h = document.createElement('div');
+        h.className='handle';
+        h.addEventListener('pointerdown', (ev)=> startResize(ev, el));
+        d.appendChild(h);
+      }
+
+      d.addEventListener('pointerdown', (ev)=> startDrag(ev, el));
+      stage.appendChild(d);
+    });
+  }
+
+  function selectEl(id){ selectedId = id; render(); switchTab('style'); }
+
+  // ---- drag & resize ----
+  function getGuideTargets(excludeId){
+    const w = stage.clientWidth, h = stage.clientHeight;
+    let xs = [0, w/2, w];
+    let ys = [0, h/2, h];
+    elements.forEach(e=>{
+      if(e.id===excludeId) return;
+      xs.push(e.x, e.x+e.w/2, e.x+e.w);
+      ys.push(e.y, e.y+e.h/2, e.y+e.h);
+    });
+    return {xs, ys};
+  }
+  function clearGuides(){
+    stage.querySelectorAll('.guide').forEach(g=>g.remove());
+  }
+  function showGuideV(x){
+    const g = document.createElement('div'); g.className='guide v'; g.style.left=x+'px'; stage.appendChild(g);
+  }
+  function showGuideH(y){
+    const g = document.createElement('div'); g.className='guide h'; g.style.top=y+'px'; stage.appendChild(g);
+  }
+  function snapValue(val, size, targets){
+    const points = [val, val+size/2, val+size];
+    for(const p of points){
+      for(const t of targets){
+        if(Math.abs(p-t) <= 6){
+          return {value: val + (t-p), guide:t};
+        }
+      }
+    }
+    return null;
+  }
+
+  function startDrag(ev, el){
+    ev.stopPropagation();
+    selectedId = el.id;
+    snapshot();
+    const startX = ev.clientX, startY = ev.clientY;
+    const ox = el.x, oy = el.y;
+    const stageRect = stage.getBoundingClientRect();
+    const {xs, ys} = getGuideTargets(el.id);
+    function move(e){
+      let nx = ox + (e.clientX-startX);
+      let ny = oy + (e.clientY-startY);
+      nx = Math.max(0, Math.min(nx, stageRect.width - el.w));
+      ny = Math.max(0, Math.min(ny, stageRect.height - el.h));
+      const sx = snapValue(nx, el.w, xs);
+      if(sx) nx = sx.value;
+      const sy = snapValue(ny, el.h, ys);
+      if(sy) ny = sy.value;
+      el.x = nx; el.y = ny;
+      renderStage();
+      if(sx) showGuideV(sx.guide);
+      if(sy) showGuideH(sy.guide);
+    }
+    function up(){ document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); clearGuides(); render(); }
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    render();
+  }
+
+  function startResize(ev, el){
+    ev.stopPropagation();
+    snapshot();
+    const startX = ev.clientX, startY = ev.clientY;
+    const ow = el.w, oh = el.h;
+    function move(e){
+      el.w = Math.max(24, ow + (e.clientX-startX));
+      el.h = Math.max(20, oh + (e.clientY-startY));
+      renderStage();
+    }
+    function up(){ document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); render(); }
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  }
+
+  stage.addEventListener('pointerdown', ()=>{ selectedId=null; render(); });
+
+  // ---- tabs ----
+  function switchTab(name){
+    currentTab = name;
+    tabs.forEach(t=> t.classList.toggle('active', t.dataset.tab===name));
+    renderTray();
+  }
+  tabs.forEach(t=> t.addEventListener('click', ()=> switchTab(t.dataset.tab)) );
+
+  function renderTray(){
+    trayBody.innerHTML = '';
+    if(currentTab==='add') return renderAddTab();
+    if(currentTab==='style') return renderStyleTab();
+    if(currentTab==='layers') return renderLayersTab();
+    if(currentTab==='bg') return renderBgTab();
+    if(currentTab==='export') return renderExportTab();
+  }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._h);
+    showToast._h = setTimeout(()=> t.classList.remove('show'), 1800);
+  }
+
+  const typeNamesAr = {button:'زر', rect:'مربع/مستطيل', circle:'دائرة', text:'نص', menubar:'شريط قائمة', input:'حقل إدخال', card:'بطاقة'};
+
+  function buildTextSpec(){
+    const w = stage.clientWidth, h = stage.clientHeight;
+    let lines = [];
+    lines.push('وصف تصميم واجهة (تم إنشاؤه بأداة باني الواجهات المبسط):');
+    lines.push('حجم الشاشة: '+w+' × '+h+' بكسل');
+    lines.push('لون خلفية الشاشة: '+stageBg);
+    lines.push('عدد العناصر: '+elements.length);
+    lines.push('');
+    elements.forEach((el,i)=>{
+      let d = (i+1)+'. '+(typeNamesAr[el.type]||el.type);
+      if(el.text) d += ' — النص: "'+el.text+'"';
+      d += ' | الموقع: x='+Math.round(el.x)+', y='+Math.round(el.y);
+      d += ' | الحجم: '+Math.round(el.w)+'×'+Math.round(el.h);
+      d += ' | لون التعبئة: '+el.fill;
+      if(el.text) d += ' | لون النص: '+el.textColor+', حجم الخط: '+el.fontSize;
+      if(el.type!=='circle') d += ' | استدارة الحواف: '+el.radius+'px';
+      if(el.borderW>0) d += ' | إطار: '+el.borderW+'px '+el.border;
+      if(el.glossy) d += ' | مظهر لامع/مائي (تدرج شفاف علوي فاتح)';
+      lines.push(d);
+    });
+    lines.push('');
+    lines.push('رجاءً أنشئ هذه الواجهة بنفس المواقع والألوان والأحجام التقريبية أعلاه، مع تنسيق نظيف ومتجاوب.');
+    return lines.join('\n');
+  }
+
+  function buildJSONSpec(){
+    const w = stage.clientWidth, h = stage.clientHeight;
+    const data = {
+      canvas:{width:w, height:h, background:stageBg},
+      elements: elements.map(el=>({
+        type: el.type, text: el.text||undefined,
+        x: Math.round(el.x), y: Math.round(el.y), w: Math.round(el.w), h: Math.round(el.h),
+        fill: el.fill, textColor: el.text? el.textColor: undefined, fontSize: el.text? el.fontSize: undefined,
+        radius: el.type!=='circle'? el.radius: undefined,
+        border: el.borderW>0? {width:el.borderW, color:el.border}: undefined,
+        glossy: el.glossy || undefined
+      }))
+    };
+    return JSON.stringify(data, null, 2);
+  }
+
+  function copyText(str, label){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(str).then(()=> showToast(label+' — تم النسخ ✓')).catch(()=> fallbackCopy(str,label));
+    } else fallbackCopy(str,label);
+  }
+  function fallbackCopy(str,label){
+    const ta = document.createElement('textarea');
+    ta.value = str; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); showToast(label+' — تم النسخ ✓'); }catch(e){ showToast('تعذّر النسخ، انسخ يدويًا'); }
+    document.body.removeChild(ta);
+  }
+
+  function roundRectPath(ctx,x,y,w,h,r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+
+  function downloadPNG(){
+    const w = stage.clientWidth, h = stage.clientHeight;
+    const canvas = document.createElement('canvas');
+    const scale = 2;
+    canvas.width = w*scale; canvas.height = h*scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale,scale);
+    ctx.fillStyle = stageBg; ctx.fillRect(0,0,w,h);
+
+    elements.forEach(el=>{
+      ctx.save();
+      ctx.globalAlpha = (el.opacity==null?1:el.opacity);
+      if(el.type==='circle'){
+        ctx.beginPath();
+        ctx.arc(el.x+el.w/2, el.y+el.h/2, Math.min(el.w,el.h)/2, 0, Math.PI*2);
+        ctx.fillStyle = el.fill; ctx.fill();
+        if(el.borderW>0){ ctx.lineWidth=el.borderW; ctx.strokeStyle=el.border; ctx.stroke(); }
+      } else {
+        roundRectPath(ctx, el.x, el.y, el.w, el.h, el.radius||0);
+        ctx.fillStyle = el.fill; ctx.fill();
+        if(el.type==='image'){
+          ctx.save();
+          roundRectPath(ctx, el.x, el.y, el.w, el.h, el.radius||0);
+          ctx.clip();
+          ctx.strokeStyle='rgba(0,0,0,.12)'; ctx.lineWidth=1;
+          for(let i=-el.h; i<el.w; i+=10){
+            ctx.beginPath();
+            ctx.moveTo(el.x+i, el.y);
+            ctx.lineTo(el.x+i+el.h, el.y+el.h);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+        if(el.borderW>0){ ctx.lineWidth=el.borderW; ctx.strokeStyle=el.border; ctx.stroke(); }
+      }
+      if(el.glossy){
+        roundRectPath(ctx, el.x, el.y, el.w, el.h*0.55, el.radius||0);
+        const grad = ctx.createLinearGradient(0, el.y, 0, el.y+el.h*0.55);
+        grad.addColorStop(0,'rgba(255,255,255,.55)');
+        grad.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle = grad; ctx.fill();
+      }
+      if(el.text){
+        ctx.fillStyle = el.textColor;
+        ctx.font = (el.type==='button'||el.type==='menubar'? '600 ':'400 ')+el.fontSize+'px Tahoma, Arial, sans-serif';
+        const align = el.textAlign || 'center';
+        ctx.textAlign = align==='center' ? 'center' : (align==='left' ? 'left' : 'right');
+        ctx.textBaseline = 'middle';
+        const tx = align==='center' ? el.x+el.w/2 : (align==='left' ? el.x+6 : el.x+el.w-6);
+        ctx.fillText(el.text, tx, el.y+el.h/2, el.w-8);
+      }
+      ctx.restore();
+    });
+
+    canvas.toBlob(blob=>{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'تصميم-الواجهة.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('تم تنزيل الصورة ✓');
+    });
+  }
+
+  function renderExportTab(){
+    if(elements.length===0){
+      const msg = document.createElement('div');
+      msg.className='emptyMsg';
+      msg.textContent='أضف بعض العناصر أولًا قبل التصدير.';
+      trayBody.appendChild(msg);
+      return;
+    }
+
+    const c1 = document.createElement('div');
+    c1.className='exportCard';
+    c1.innerHTML = '<h3>تنزيل كصورة PNG</h3><p>احفظ التصميم كصورة على جهازك وأرفقها للوكيل — بديل أسرع من التقاط لقطة شاشة يدويًا.</p>';
+    const b1 = document.createElement('button'); b1.className='actBtn'; b1.style.width='100%'; b1.textContent='تنزيل الصورة';
+    b1.addEventListener('click', downloadPNG);
+    c1.appendChild(b1);
+    trayBody.appendChild(c1);
+
+    const c2 = document.createElement('div');
+    c2.className='exportCard';
+    c2.innerHTML = '<h3>نسخ وصف نصي دقيق</h3><p>نص جاهز يشرح كل عنصر وموقعه وألوانه بالتفصيل. الصق هذا النص مباشرة في محادثة الوكيل ليطبقه فورًا دون الحاجة لصورة.</p>';
+    const b2 = document.createElement('button'); b2.className='actBtn'; b2.style.width='100%'; b2.textContent='نسخ الوصف النصي';
+    b2.addEventListener('click', ()=> copyText(buildTextSpec(), 'الوصف النصي'));
+    c2.appendChild(b2);
+    trayBody.appendChild(c2);
+
+    const c3 = document.createElement('div');
+    c3.className='exportCard';
+    c3.innerHTML = '<h3>نسخ بيانات JSON</h3><p>صيغة منظّمة للمطورين أو الوكلاء المتقدمة — أدق من الوصف النصي إن كان الوكيل يفهم أكواد أو بيانات.</p>';
+    const b3 = document.createElement('button'); b3.className='actBtn'; b3.style.width='100%'; b3.textContent='نسخ JSON';
+    b3.addEventListener('click', ()=> copyText(buildJSONSpec(), 'بيانات JSON'));
+    c3.appendChild(b3);
+    trayBody.appendChild(c3);
+  }
+
+  function renderAddTab(){
+    const grid = document.createElement('div');
+    grid.className='grid';
+    const items = [
+      {t:'button', label:'زر', icon:'pill'},
+      {t:'rect', label:'مربع/مستطيل', icon:'rect'},
+      {t:'circle', label:'دائرة', icon:'circle'},
+      {t:'text', label:'نص', icon:'line'},
+      {t:'menubar', label:'شريط قائمة', icon:'rect'},
+      {t:'input', label:'حقل إدخال', icon:'rect'},
+      {t:'card', label:'بطاقة', icon:'rect'},
+      {t:'divider', label:'خط فاصل', icon:'line'},
+      {t:'image', label:'صورة نائبة', icon:'rect'},
+    ];
+    items.forEach(it=>{
+      const b = document.createElement('button');
+      b.className='addBtn';
+      const ic = document.createElement('div');
+      ic.className='ic '+(it.icon==='pill'?'pill':it.icon==='circle'?'circle':it.icon==='line'?'line':'');
+      b.appendChild(ic);
+      const lab = document.createElement('div');
+      lab.textContent = it.label;
+      b.appendChild(lab);
+      b.addEventListener('click', ()=> addElement(it.t));
+      grid.appendChild(b);
+    });
+    trayBody.appendChild(grid);
+
+    const msg = document.createElement('div');
+    msg.className='emptyMsg';
+    msg.style.marginTop='14px';
+    msg.innerHTML = 'اختر عنصرًا لإضافته إلى الشاشة، ثم اسحبه لتحريكه واسحب النقطة الصغيرة في الزاوية لتغيير حجمه. اضغط على العنصر لتعديل لونه وشكله من تبويب <b>تنسيق العنصر</b>.';
+    trayBody.appendChild(msg);
+  }
+
+  function renderStyleTab(){
+    const el = elements.find(e=>e.id===selectedId);
+    if(!el){
+      const msg = document.createElement('div');
+      msg.className='emptyMsg';
+      msg.innerHTML = 'لا يوجد عنصر محدد الآن.<br>اضغط على أي عنصر في الشاشة، أو أضف عنصرًا جديدًا من تبويب <b>إضافة عناصر</b>.';
+      trayBody.appendChild(msg);
+      return;
+    }
+
+    // color
+    addLabel('لون التعبئة');
+    trayBody.appendChild(swatchRow(el.fill, c=>{ snapshot(); el.fill=c; render(); }, true));
+
+    // text color if has text
+    if(el.type!=='rect' || el.text){
+      addLabel('لون النص');
+      trayBody.appendChild(swatchRow(el.textColor, c=>{ snapshot(); el.textColor=c; render(); }, false));
+    }
+
+    // text content
+    const rowText = document.createElement('div');
+    rowText.className='row';
+    const lab = document.createElement('label'); lab.textContent='النص';
+    const inp = document.createElement('input'); inp.type='text'; inp.value=el.text;
+    let textSnapped = false;
+    inp.addEventListener('focus', ()=>{ textSnapped=false; });
+    inp.addEventListener('input', ()=>{ if(!textSnapped){ snapshot(); textSnapped=true; } el.text=inp.value; render(); });
+    rowText.appendChild(lab); rowText.appendChild(inp);
+    trayBody.appendChild(rowText);
+
+    // text alignment
+    if(el.text || el.type==='text'){
+      const rowAl = document.createElement('div');
+      rowAl.className='row';
+      const albl = document.createElement('label'); albl.textContent='محاذاة النص';
+      const seg = document.createElement('div'); seg.className='alignSeg';
+      [['right','يمين'],['center','وسط'],['left','يسار']].forEach(([val,label])=>{
+        const bt = document.createElement('button');
+        bt.textContent = label;
+        if((el.textAlign||'center')===val) bt.classList.add('active');
+        bt.addEventListener('click', ()=>{ snapshot(); el.textAlign=val; render(); });
+        seg.appendChild(bt);
+      });
+      rowAl.appendChild(albl); rowAl.appendChild(seg);
+      trayBody.appendChild(rowAl);
+    }
+
+    // radius
+    if(el.type!=='circle'){
+      trayBody.appendChild(sliderRow('استدارة الحواف', el.radius, 0, 60, v=>{ el.radius=v; renderStage(); }, ()=>snapshot()));
+    }
+
+    // font size
+    trayBody.appendChild(sliderRow('حجم الخط', el.fontSize, 10, 28, v=>{ el.fontSize=v; renderStage(); }, ()=>snapshot()));
+
+    // border width
+    trayBody.appendChild(sliderRow('سماكة الإطار', el.borderW, 0, 6, v=>{ el.borderW=v; renderStage(); }, ()=>snapshot()));
+
+    // opacity
+    trayBody.appendChild(sliderRow('الشفافية', Math.round((el.opacity==null?1:el.opacity)*100), 10, 100, v=>{ el.opacity=v/100; renderStage(); }, ()=>snapshot()));
+
+    // glossy toggle
+    const tog = document.createElement('div');
+    tog.className='toggleRow';
+    const sp = document.createElement('span'); sp.textContent='مظهر لامع (مائي)';
+    const sw = document.createElement('div'); sw.className='switch'+(el.glossy?' on':'');
+    const dot = document.createElement('div'); dot.className='dot'; sw.appendChild(dot);
+    sw.addEventListener('click', ()=>{ snapshot(); el.glossy=!el.glossy; render(); });
+    tog.appendChild(sp); tog.appendChild(sw);
+    trayBody.appendChild(tog);
+
+    // actions
+    const acts = document.createElement('div');
+    acts.className='actionsRow';
+    const dup = document.createElement('button'); dup.className='actBtn'; dup.textContent='تكرار';
+    dup.addEventListener('click', duplicateSelected);
+    const front = document.createElement('button'); front.className='actBtn'; front.textContent='إلى الأمام';
+    front.addEventListener('click', ()=>{
+      snapshot();
+      elements = elements.filter(e=>e.id!==el.id); elements.push(el); render();
+    });
+    const del = document.createElement('button'); del.className='actBtn danger'; del.textContent='حذف';
+    del.addEventListener('click', ()=>{
+      snapshot();
+      elements = elements.filter(e=>e.id!==el.id); selectedId=null; render(); switchTab('add');
+    });
+    acts.appendChild(dup); acts.appendChild(front); acts.appendChild(del);
+    trayBody.appendChild(acts);
+  }
+
+  function renderLayersTab(){
+    if(elements.length===0){
+      const msg = document.createElement('div');
+      msg.className='emptyMsg';
+      msg.textContent='لم تُضِف أي عناصر بعد.';
+      trayBody.appendChild(msg);
+      return;
+    }
+    const list = document.createElement('div');
+    list.id='layersList';
+    const names = {button:'زر', rect:'مربع', circle:'دائرة', text:'نص', menubar:'شريط قائمة', input:'حقل إدخال', card:'بطاقة'};
+    elements.slice().reverse().forEach(el=>{
+      const item = document.createElement('div');
+      item.className='layerItem'+(el.id===selectedId?' active':'');
+      const label = document.createElement('span');
+      label.textContent = (names[el.type]||el.type) + (el.text? ' — '+el.text.slice(0,14) : '');
+      const delBtn = document.createElement('span');
+      delBtn.className='del'; delBtn.textContent='×';
+      delBtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); snapshot(); elements=elements.filter(e=>e.id!==el.id); if(selectedId===el.id) selectedId=null; render(); });
+      item.appendChild(label); item.appendChild(delBtn);
+      item.addEventListener('click', ()=> selectEl(el.id));
+      list.appendChild(item);
+    });
+    trayBody.appendChild(list);
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className='actBtn danger';
+    clearBtn.style.width='100%'; clearBtn.style.marginTop='10px';
+    clearBtn.textContent='حذف كل العناصر';
+    clearBtn.addEventListener('click', ()=>{ if(confirm('حذف كل شيء من الشاشة؟')){ snapshot(); elements=[]; selectedId=null; render(); } });
+    trayBody.appendChild(clearBtn);
+  }
+
+  function renderBgTab(){
+    addLabel('لون خلفية الشاشة');
+    trayBody.appendChild(swatchRow(stageBg, c=>{ snapshot(); stageBg=c; render(); }, true));
+    const msg = document.createElement('div');
+    msg.className='emptyMsg';
+    msg.style.marginTop='10px';
+    msg.textContent='هذا هو لون خلفية كامل التطبيق أو الموقع الذي تصممه.';
+    trayBody.appendChild(msg);
+  }
+
+  function addLabel(text){
+    const l = document.createElement('div');
+    l.style.fontSize='12px'; l.style.color='var(--ink-soft)'; l.style.margin='2px 0 8px';
+    l.textContent = text;
+    trayBody.appendChild(l);
+  }
+
+  function swatchRow(current, onPick, includeColorInput){
+    const wrap = document.createElement('div');
+    wrap.className='swatches';
+    wrap.style.marginBottom='14px';
+    palette.forEach(c=>{
+      const s = document.createElement('div');
+      s.className='sw';
+      s.style.background = c==='#ffffff' ? '#ffffff' : c;
+      s.style.borderColor = c==='#ffffff' ? '#ccc' : 'rgba(0,0,0,.15)';
+      if(c.toLowerCase()===String(current).toLowerCase()) s.style.outline='2px solid #3b6a5c';
+      s.addEventListener('click', ()=> onPick(c));
+      wrap.appendChild(s);
+    });
+    if(includeColorInput){
+      const custom = document.createElement('input');
+      custom.type='color';
+      custom.value = current && current.length===7 ? current : '#3b6a5c';
+      custom.addEventListener('input', ()=> onPick(custom.value));
+      wrap.appendChild(custom);
+    }
+    return wrap;
+  }
+
+  function sliderRow(label, val, min, max, onChange, onCommit){
+    const row = document.createElement('div');
+    row.className='row';
+    const l = document.createElement('label'); l.textContent=label;
+    const inp = document.createElement('input'); inp.type='range'; inp.min=min; inp.max=max; inp.value=val;
+    const out = document.createElement('div'); out.className='valTag'; out.textContent=val;
+    let committed = false;
+    inp.addEventListener('pointerdown', ()=>{ committed=false; });
+    inp.addEventListener('input', ()=>{
+      if(!committed && onCommit){ onCommit(); committed=true; }
+      out.textContent=inp.value; onChange(parseInt(inp.value));
+    });
+    row.appendChild(l); row.appendChild(inp); row.appendChild(out);
+    return row;
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
